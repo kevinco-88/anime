@@ -19,6 +19,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "build:css": " postcss public/styles/tailwind.css -o public/styles/styles.css --watch"
   },
   "author": "",
