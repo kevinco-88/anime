@@ -1,0 +1,182 @@
+<div class="w-screen h-auto flex flex-col items-center">
+  <form id="searchAnime" class="flex flex-row items-center">
+    <input
+      class="w-72 text-center h-10 rounded-xl border-2 border-r-0 rounded-r-none outline-none"
+      type="text"
+      id="search"
+      name="search"
+      placeholder="Search"
+      required
+    />
+    <button
+      class="w-11 text-center h-10 rounded-xl rounded-l-none flex items-center justify-center"
+      style="background: linear-gradient(to right, #159957, #155799)"
+      type="submit"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth="1.5"
+        stroke="currentColor"
+        class="w-7 text-white"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+        />
+      </svg>
+    </button>
+  </form>
+  <%- include('searchFilter'); -%>
+
+  <div
+    id="topAnime"
+    class="h-auto grid lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 max-sm:grid-cols-2 lg:gap-7 lg:mt-8 items-center"
+  ></div>
+  <div id="anime" class="hidden w-full h-auto"></div>
+  <button
+    id="showMore"
+    class="text-white p-1 w-40 h-10 m-5 rounded-3xl flex items-center justify-center"
+    style="
+      background: linear-gradient(to right, #159957, #155799);
+      box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+    "
+  >
+    Show more
+  </button>
+</div>
+
+<script>
+  const topAnime = document.getElementById("topAnime");
+  const anime = document.getElementById("anime");
+  const showMore = document.getElementById("showMore");
+  const searchAnime = document.getElementById("searchAnime");
+
+  let page = 1;
+  const limit = 20;
+  let currentParams = new URLSearchParams();
+  const url = "https://content-moose-luckily.ngrok-free.app/";
+  const apiUrlBase = `${url}api/animes`;
+
+  function showAnimes(apiUrl) {
+    fetch(apiUrl)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        data.animes.forEach((anime) => {
+          const html = `
+            <div class=" w-40 h-full mx-4 text-black cursor-pointer">
+              <img class="selectedAnime rounded-md h-60" src="${anime.images.jpg.large_image_url}" alt="${anime.title}"data-id="${anime._id}">
+              <div class="w-full h-8 bottom-8 relative rounded-md bg-white opacity-90 flex justify-around items-center">
+                <div class="flex gap-2">
+                  <img class="w-5 h-5" src="/images/star.png" alt="">
+                  <p>${anime.score}</p>
+                </div>
+                <h2>Ep: ${anime.episodes}</h2>
+              </div>
+              <h2 class="bottom-8 relative">${anime.title}</h2>
+            </div>`;
+          topAnime.insertAdjacentHTML("beforeend", html);
+        });
+      })
+      .then(() => {
+        topAnime.addEventListener("click", selectedAnime);
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+      });
+  }
+
+  showAnimes(`${apiUrlBase}?page=${page}&limit=${limit}`);
+
+  showMore.addEventListener("click", () => {
+    page++;
+    currentParams.set("page", page);
+    currentParams.set("limit", limit);
+    showAnimes(`${apiUrlBase}?${currentParams.toString()}`);
+  });
+
+  function selectedAnime(e) {
+    const clickedAnime = e.target.closest(".selectedAnime");
+    if (clickedAnime) {
+      const id = clickedAnime.getAttribute("data-id");
+      history.pushState({ id }, "", `?anime=${id}`);
+      showSelectedAnime(id);
+    }
+  }
+
+  window.addEventListener("popstate", (event) => {
+    if (event.state && event.state.id) {
+      showSelectedAnime(event.state.id);
+    } else {
+      showAnimeList();
+    }
+  });
+
+  function showSelectedAnime(animeId) {
+    topAnime.classList.add("hidden");
+    anime.classList.remove("hidden");
+    anime.classList.add("flex");
+    showMore.style.display = "none";
+    advancedSeachFrom.classList.add("hidden");
+    advancedSeachFrom.classList.remove("flex");
+    advancedSeach.innerHTML = "Advanced Search";
+    const apiUrl = `${url}api/animes/${animeId}`;
+    fetch(apiUrl)
+      .then((res) => res.json())
+      .then((data) => {
+        const html = `
+            <div class="selectedAnime w-full h-full text-black cursor-pointer flex flex-col items-center p-8" data-id="${data._id}">
+              <img class="rounded-md h-60 w-40" src="${data.images.jpg.large_image_url}" alt="${data.title}">
+              <div class="mt-10">
+                <h2>Title: ${data.title}</h2>
+                <h2>Ep: ${data.episodes}</h2>
+                <h2>Rating: ${data.score}</h2>
+                <h2>Status: ${data.status}</h2>
+              </div>
+              <details class='text-center mt-10'>
+                <summary>Synopsis</summary>
+                <p class="lg:px-20">${data.synopsis}</p>
+              </details> 
+            </div>
+            `;
+        anime.innerHTML = html;
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+      });
+  }
+
+  function showAnimeList() {
+    topAnime.classList.remove("hidden");
+    anime.classList.add("hidden");
+    anime.classList.remove("flex");
+    showMore.style.display = "block";
+  }
+
+  searchAnime.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const animeName = searchAnime.search.value;
+    currentParams = new URLSearchParams();
+    currentParams.append("q", animeName);
+    page = 1;
+    topAnime.innerHTML = "";
+    showAnimes(
+      `${apiUrlBase}?${currentParams.toString()}&page=${page}&limit=${limit}`
+    );
+    showAnimeList();
+  });
+
+  const params = new URLSearchParams(window.location.search);
+
+  const animeId = params.get("anime");
+  if (animeId) {
+    showSelectedAnime(animeId);
+  }
+</script>

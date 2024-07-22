@@ -1,0 +1,202 @@
+<style>
+  .loader {
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #3498db;
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .flex {
+    display: flex;
+  }
+</style>
+
+<div class="w-full items-center flex flex-col">
+  <h2 id="advancedSeach" class="mb-5 cursor-pointer">Advanced Search</h2>
+  <form
+    id="advancedSeachFrom"
+    class="mb-5 w-full flex-col items-center border-b-4 shadow-gray-600 hidden"
+  >
+    <label for="genres">Genres:</label>
+    <select
+      class="w-52 text-center h-10 rounded-xl outline-none border-2 bg-white"
+      id="genres"
+      name="genres"
+    >
+      <option value="">-- Select Genre --</option>
+    </select>
+
+    <label for="studios">Studio:</label>
+    <select
+      class="w-52 text-center h-10 rounded-xl outline-none border-2 bg-white"
+      id="studio"
+      name="studio"
+    >
+      <option value="">-- Select Studio --</option>
+    </select>
+
+    <label for="episodesFrom">Episodes (from):</label>
+    <input
+      class="w-52 text-center h-10 rounded-xl outline-none px-2 border-2"
+      style="appearance: textfield"
+      type="number"
+      id="episodesFrom"
+      name="episodesFrom"
+    />
+
+    <label for="episodesTo">Episodes (to):</label>
+    <input
+      class="w-52 text-center h-10 rounded-xl outline-none px-2 border-2"
+      style="appearance: textfield"
+      type="number"
+      id="episodesTo"
+      name="episodesTo"
+    />
+
+    <label for="status">Status</label>
+    <select
+      class="w-52 text-center h-10 rounded-xl outline-none border-2 bg-white"
+      name="status"
+      id="status"
+    >
+      <option value="">-- Select Status --</option>
+      <option value="Finished Airing">Finished Airing</option>
+      <option value="Airing">Airing</option>
+    </select>
+
+    <button
+      class="text-white p-1 w-40 h-10 m-5 rounded-3xl flex items-center justify-center"
+      style="
+        background: linear-gradient(to right, #159957, #155799);
+        box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+      "
+      type="submit"
+    >
+      Search
+    </button>
+    <div id="loading" class="hidden">
+      <div class="loader"></div>
+    </div>
+
+    <div id="animeContainer" class="w-full items-center flex flex-col"></div>
+  </form>
+</div>
+
+<script>
+  const selectGenres = document.getElementById("genres");
+  const selectStudios = document.getElementById("studio");
+  const advancedSeach = document.getElementById("advancedSeach");
+  const advancedSeachFrom = document.querySelector("#advancedSeachFrom");
+  const loadingIndicator = document.getElementById("loading");
+  const animeContainer = document.getElementById("animeContainer");
+  const urli = "https://content-moose-luckily.ngrok-free.app/";
+  async function fetchOptions() {
+    try {
+      const genresResponse = await fetch(`${urli}api/genres`);
+      const genres = await genresResponse.json();
+      genres.forEach((genre) => {
+        const html = `<option value="${genre}">${genre}</option>`;
+        selectGenres.insertAdjacentHTML("beforeend", html);
+      });
+
+      const studiosResponse = await fetch(`${urli}api/studios`);
+      const studios = await studiosResponse.json();
+      studios.forEach((studio) => {
+        const html = `<option value="${studio}">${studio}</option>`;
+        selectStudios.insertAdjacentHTML("beforeend", html);
+      });
+    } catch (error) {
+      console.error("Error fetching options:", error);
+    }
+  }
+
+  fetchOptions();
+
+  advancedSeach.addEventListener("click", () => {
+    if (advancedSeach.innerHTML === "Advanced Search") {
+      advancedSeach.innerHTML = "Hide Advanced Search";
+    } else {
+      advancedSeach.innerHTML = "Advanced Search";
+    }
+    advancedSeachFrom.classList.toggle("hidden");
+    advancedSeachFrom.classList.toggle("flex");
+  });
+
+  advancedSeachFrom.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const topAnime = document.getElementById("topAnime");
+    topAnime.innerHTML = "";
+    loadingIndicator.classList.remove("hidden");
+    showAnimeList();
+    const animeGenre = advancedSeachFrom.genres.value;
+    const animeStudio = advancedSeachFrom.studio.value;
+    const animeEpisodesFrom = advancedSeachFrom.episodesFrom.value;
+    const animeEpisodesTo = advancedSeachFrom.episodesTo.value;
+    const animeStatus = advancedSeachFrom.status.value;
+
+    currentParams = new URLSearchParams();
+    if (animeGenre) currentParams.append("genre", animeGenre);
+    if (animeStudio) currentParams.append("studio", animeStudio);
+    if (animeEpisodesFrom)
+      currentParams.append("episodesFrom", animeEpisodesFrom);
+    if (animeEpisodesTo) currentParams.append("episodesTo", animeEpisodesTo);
+    if (animeStatus) currentParams.append("status", animeStatus);
+
+    const page = 1;
+    const limit = 20;
+    const apiUrl = `${urli}api/animes?${currentParams.toString()}&page=${page}&limit=${limit}`;
+    console.log("API URL:", apiUrl);
+    try {
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      loadingIndicator.classList.add("hidden");
+      console.log("API Response:", data);
+      displayAnimes(data.animes);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      loadingIndicator.classList.add("hidden");
+    }
+  });
+
+  function displayAnimes(animes) {
+    const topAnime = document.getElementById("topAnime");
+    topAnime.innerHTML = "";
+
+    if (animes.length === 0) {
+      topAnime.innerHTML = "<p>No results found.</p>";
+      showMore.style.display = "none";
+
+      return;
+    }
+    animes.forEach((anime) => {
+      const html = `
+            <div class=" w-40 h-full mx-4 text-black cursor-pointer">
+              <img class="selectedAnime rounded-md h-60" src="${anime.images.jpg.large_image_url}" alt="${anime.title}"data-id="${anime._id}">
+              <div class="w-full h-8 bottom-8 relative rounded-md bg-white opacity-90 flex justify-around items-center">
+                <div class="flex gap-2">
+                  <img class="w-5 h-5" src="/images/star.png" alt="">
+                  <p>${anime.score}</p>
+                </div>
+                <h2>Ep: ${anime.episodes}</h2>
+              </div>
+              <h2 class="bottom-8 relative">${anime.title}</h2>
+            </div>`;
+      topAnime.insertAdjacentHTML("beforeend", html);
+    });
+  }
+</script>

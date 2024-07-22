@@ -1,0 +1,179 @@
+<%- include('partials/header'); -%>
+<body class="w-screen h-screen flex flex-col items-center justify-between">
+  <form
+    id="signupForm"
+    class="flex flex-col items-center m-5 w-screen h-full space-y-20"
+  >
+    <h1 class="text-emerald-600 text-7xl">Sing Up</h1>
+    <div class="w-full flex flex-col items-center space-y-3">
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="text"
+        name="username"
+        placeholder="username"
+        required
+      />
+      <div class="username error"></div>
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="text"
+        name="email"
+        placeholder="email"
+        required
+      />
+      <div class="email error"></div>
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="password"
+        name="password"
+        placeholder="password"
+        required
+      />
+      <div class="password error"></div>
+      <input
+        type="hidden"
+        id="showRecovery"
+        name="showRecovery"
+        value="<%= showRecovery %>"
+      />
+      <input
+        type="hidden"
+        id="showVerification"
+        name="showVerification"
+        value="<%= showVerification %>"
+      />
+    </div>
+    <button
+      class="text-white p-1 w-52 h-12 rounded-3xl"
+      style="
+        background: linear-gradient(to right, #159957, #155799);
+        box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+      "
+    >
+      Sign Up
+    </button>
+  </form>
+
+  <form
+    id="verifyForm"
+    style="display: none"
+    class="flex-col items-center space-y-14 mb-40"
+  >
+    <h1 class="text-center text-lg">
+      A verification code was sent to your email address
+    </h1>
+
+    <input
+      class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+      style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+      type="text"
+      name="verificationCode"
+      placeholder="code"
+      required
+    />
+    <div id="recoverPassword" style="display: none" class="flex flex-col">
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="password"
+        name="password"
+        placeholder="password"
+      />
+      <div class="recover error"></div>
+    </div>
+    <button
+      id="verifyButton"
+      class="text-white p-1 w-52 h-12 rounded-3xl"
+      style="
+        background: linear-gradient(to right, #159957, #155799);
+        box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+      "
+    >
+      Submit
+    </button>
+  </form>
+</body>
+<script>
+  const signupForm = document.getElementById("signupForm");
+  const usernameError = document.querySelector(".username.error");
+  const emailError = document.querySelector(".email.error");
+  const passwordError = document.querySelector(".password.error");
+  const verifyForm = document.getElementById("verifyForm");
+  const showVerification = document.getElementById("showVerification").value;
+  const showRecovery = document.getElementById("showRecovery").value;
+  const recoverPassword = document.getElementById("recoverPassword");
+  const recoverError = document.querySelector(".recover.error");
+  if (showVerification === "true") {
+    signupForm.style.display = "none";
+    verifyForm.style.display = "flex";
+  }
+
+  if (showRecovery === "true") {
+    signupForm.style.display = "none";
+    verifyForm.style.display = "flex";
+    recoverPassword.style.display = "flex";
+  }
+
+  signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    usernameError.textContent = "";
+    emailError.textContent = "";
+    passwordError.textContent = "";
+
+    // get the values
+    const username = signupForm.username.value;
+    const email = signupForm.email.value;
+    const password = signupForm.password.value;
+    try {
+      const res = await fetch("/signup", {
+        method: "POST",
+        body: JSON.stringify({ username, email, password }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      console.log(data);
+
+      if (data.errors) {
+        usernameError.textContent = data.errors.username;
+        emailError.textContent = data.errors.email;
+        passwordError.textContent = data.errors.password;
+      }
+      if (data.user) {
+        signupForm.style.display = "none";
+        verifyForm.style.display = "flex";
+      }
+    } catch (err) {}
+  });
+
+  verifyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = verifyForm.verificationCode.value;
+    const password = verifyForm.password.value;
+    recoverError.textContent = "";
+    try {
+      const res = await fetch("/verify", {
+        method: "POST",
+        body: JSON.stringify({ code, password }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      console.log(data);
+      if (data.user) {
+        location.assign("/clientHome");
+      }
+      if (data.redirect) {
+        location.assign("/login");
+      }
+      if (data.errors) {
+        recoverError.textContent = data.errors;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+</script>
+
+<%- include('partials/footer'); -%>

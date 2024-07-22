@@ -1,0 +1,165 @@
+<%- include('partials/header'); -%>
+<body class="w-screen h-screen flex flex-col items-center justify-between">
+  <form class="flex flex-col items-center m-5 w-screen h-full space-y-24">
+    <h1 class="text-emerald-600 text-7xl">Log in</h1>
+
+    <div class="w-full flex flex-col items-center space-y-3">
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="text"
+        name="username"
+        placeholder="username"
+        required
+      />
+      <div class="username error"></div>
+
+      <input
+        class="border-2 rounded-3xl border-solid h-12 w-72 text-center mt-5"
+        style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+        type="password"
+        name="password"
+        placeholder="password"
+        required
+      />
+      <div class="password error"></div>
+    </div>
+
+    <div class="flex flex-col items-center">
+      <button
+        class="text-white p-1 w-52 h-12 rounded-3xl"
+        style="
+          background: linear-gradient(to right, #159957, #155799);
+          box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+        "
+      >
+        Log In
+      </button>
+      <div id="forgotPasswordButton" class="text-blue-400 mt-4 cursor-pointer">
+        Forgot password ?
+      </div>
+    </div>
+  </form>
+
+  <form
+    id="forgotPassword"
+    style="display: none"
+    class="flex-col items-center space-y-14 mb-40"
+  >
+    <h1 class="text-center text-lg">
+      A verification code will be sent <br />
+      Once ur account is verified we will reset your password
+    </h1>
+    <input
+      class="border-2 rounded-3xl border-solid h-12 w-72 text-center"
+      style="box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #155799"
+      type="text"
+      name="email"
+      placeholder="email"
+      required
+    />
+    <div class="emailError text-black"></div>
+    <button
+      id="forgotPasswordSubmit"
+      class="text-white p-1 w-52 h-12 rounded-3xl"
+      style="
+        background: linear-gradient(to right, #159957, #155799);
+        box-shadow: 0 2px 4px 0 #159957, 0 3px 10px 0 #159957;
+      "
+    >
+      Submit
+    </button>
+  </form>
+</body>
+<script>
+  const form = document.querySelector("form");
+  const usernameError = document.querySelector(".username.error");
+  const passwordError = document.querySelector(".password.error");
+  const emailError = document.querySelector(".emailError");
+  const forgotPasswordButton = document.querySelector("#forgotPasswordButton");
+  const forgotPassword = document.querySelector("form#forgotPassword");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    usernameError.textContent = "";
+    passwordError.textContent = "";
+
+    const username = form.username.value;
+    const password = form.password.value;
+
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const resText = await res.text();
+      console.log("Raw response text:", resText);
+
+      try {
+        const data = JSON.parse(resText);
+        console.log("Parsed response data:", data);
+
+        if (data.errors) {
+          usernameError.textContent = data.errors.username;
+          passwordError.textContent = data.errors.password;
+        }
+        if (data.user) {
+          location.assign("/clientHome");
+        }
+        if (data.redirect) {
+          location.assign(data.redirect);
+        }
+      } catch (jsonParseError) {
+        console.error("Error parsing JSON response:", jsonParseError);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  });
+
+  forgotPasswordButton.addEventListener("click", () => {
+    form.style.display = "none";
+    forgotPassword.style.display = "flex";
+    forgotPasswordButton.style.display = "none";
+  });
+
+  forgotPassword.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    emailError.textContent = "";
+    const email = forgotPassword.email.value;
+
+    try {
+      const res = await fetch("/forgotPassword", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const resText = await res.text();
+      console.log("Raw response text:", resText);
+
+      try {
+        const data = JSON.parse(resText);
+        console.log("Parsed response data:", data);
+
+        if (data.errors) {
+          emailError.textContent = data.errors;
+        }
+        if (data.redirect) {
+          location.assign(data.redirect);
+        }
+      } catch (jsonParseError) {
+        console.error("Error parsing JSON response:", jsonParseError);
+      }
+    } catch (err) {
+      console.log(err);
+      emailError.textContent = "An error occurred. Please try again.";
+    }
+  });
+</script>
+
+<%- include('partials/footer'); -%>
