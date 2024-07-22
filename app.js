@@ -24,7 +24,8 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static("public"));
 
-const dbURI = "mongodb://localhost/anime";
+const dbURI =
+  "mongodb+srv://kevikevi123:kevikevi123@cluster0.6xweptx.mongodb.net/anime";
 mongoose
   .connect(dbURI)
   .then((result) => app.listen(3000))
